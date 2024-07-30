@@ -3,7 +3,7 @@
  *  Use of this source code is governed by a BSD 3-Clause license that can be found in the LICENSE file.
  */
 
-package grape_test
+package container_test
 
 import (
 	"context"
@@ -12,12 +12,12 @@ import (
 
 	"go.osspkg.com/casecheck"
 	"go.osspkg.com/errors"
-	"go.osspkg.com/grape"
+	"go.osspkg.com/grape/container"
 	"go.osspkg.com/xc"
 )
 
 func TestUnit_EmptyDI(t *testing.T) {
-	c := grape.NewContainer(xc.New())
+	c := container.New(xc.New())
 	casecheck.NoError(t, c.Start())
 	casecheck.NoError(t, c.Stop())
 }
@@ -90,7 +90,7 @@ func (v *SimpleDI1_Service) Down() error {
 }
 
 func TestUnit_SimpleDI1(t *testing.T) {
-	c := grape.NewContainer(xc.New())
+	c := container.New(xc.New())
 	casecheck.NoError(t, c.Register(
 		&SimpleDI1_A{A: "field A of struct"},
 		func(a *SimpleDI1_A) { fmt.Println(1, a.A) },
@@ -106,7 +106,7 @@ func TestUnit_SimpleDI1(t *testing.T) {
 }
 
 func TestUnit_SimpleDI2(t *testing.T) {
-	c := grape.NewContainer(xc.New())
+	c := container.New(xc.New())
 	casecheck.NoError(t, c.Register(&SimpleDI1_A{A: "field A of struct"}))
 	casecheck.ErrorContains(t, c.Invoke(func(a *SimpleDI1_A) {
 		fmt.Println("Invoke", a.A)
@@ -116,7 +116,7 @@ func TestUnit_SimpleDI2(t *testing.T) {
 }
 
 func TestUnit_SimpleDI3(t *testing.T) {
-	c := grape.NewContainer(xc.New())
+	c := container.New(xc.New())
 	casecheck.NoError(t, c.Start())
 	casecheck.ErrorContains(t, c.Invoke(func(a *SimpleDI1_A) {
 		fmt.Println("Invoke", a.A)
@@ -371,7 +371,7 @@ func TestUnit_DI_Default(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := grape.NewContainer(xc.New())
+			c := container.New(xc.New())
 			errs := errors.Wrap(
 				c.Register(tt.register...),
 				c.Start(),

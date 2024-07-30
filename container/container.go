@@ -3,7 +3,7 @@
  *  Use of this source code is governed by a BSD 3-Clause license that can be found in the LICENSE file.
  */
 
-package grape
+package container
 
 import (
 	"fmt"
@@ -11,6 +11,9 @@ import (
 
 	"go.osspkg.com/algorithms/graph/kahn"
 	"go.osspkg.com/errors"
+	errors2 "go.osspkg.com/grape/errors"
+	reflect2 "go.osspkg.com/grape/reflect"
+	"go.osspkg.com/grape/services"
 	"go.osspkg.com/syncing"
 	"go.osspkg.com/xc"
 )
@@ -18,12 +21,12 @@ import (
 type (
 	_container struct {
 		kahn   *kahn.Graph
-		srv    *serviceTree
+		srv    services.TServices
 		store  *objectStorage
 		status syncing.Switch
 	}
 
-	Container interface {
+	TContainer interface {
 		Start() error
 		Register(items ...interface{}) error
 		Invoke(item interface{}) error
@@ -32,10 +35,10 @@ type (
 	}
 )
 
-func NewContainer(ctx xc.Context) Container {
+func New(ctx xc.Context) TContainer {
 	return &_container{
 		kahn:   kahn.New(),
-		srv:    newServiceTree(ctx),
+		srv:    services.New(ctx),
 		store:  newObjectStorage(),
 		status: syncing.NewSwitch(),
 	}
@@ -52,7 +55,7 @@ func (v *_container) Stop() error {
 // Start - initialize dependencies and start
 func (v *_container) Start() error {
 	if !v.status.On() {
-		return errDepAlreadyRunning
+		return errors2.ErrDepAlreadyRunning
 	}
 	if err := v.srv.MakeAsUp(); err != nil {
 		return err
@@ -68,7 +71,7 @@ func (v *_container) Start() error {
 
 func (v *_container) Register(items ...interface{}) error {
 	if v.srv.IsOn() {
-		return errDepAlreadyRunning
+		return errors2.ErrDepAlreadyRunning
 	}
 
 	for _, item := range items {
@@ -88,17 +91,17 @@ func (v *_container) Register(items ...interface{}) error {
 
 func (v *_container) BreakPoint(item interface{}) error {
 	if v.srv.IsOn() {
-		return errDepAlreadyRunning
+		return errors2.ErrDepAlreadyRunning
 	}
 	ref := reflect.TypeOf(item)
 	switch ref.Kind() {
 	case reflect.Func:
 	default:
-		return errBreakPointType
+		return errors2.ErrBreakPointType
 	}
-	address, ok := getReflectAddress(ref, item)
+	address, ok := reflect2.GetAddress(ref, item)
 	if !ok {
-		return errBreakPointAddress
+		return errors2.ErrBreakPointAddress
 	}
 	v.kahn.BreakPoint(address)
 	return nil
@@ -117,13 +120,13 @@ func (v *_container) prepare() error {
 			}
 			for i := 0; i < item.ReflectType.NumIn(); i++ {
 				inRefType := item.ReflectType.In(i)
-				inAddress, _ := getReflectAddress(inRefType, nil)
+				inAddress, _ := reflect2.GetAddress(inRefType, nil)
 				v.kahn.Add(inAddress, item.Address)
 			}
 
 			for i := 0; i < item.ReflectType.NumOut(); i++ {
 				outRefType := item.ReflectType.Out(i)
-				outAddress, _ := getReflectAddress(outRefType, nil)
+				outAddress, _ := reflect2.GetAddress(outRefType, nil)
 				v.kahn.Add(item.Address, outAddress)
 			}
 
@@ -133,7 +136,7 @@ func (v *_container) prepare() error {
 			}
 			for i := 0; i < item.ReflectType.NumField(); i++ {
 				inRefType := item.ReflectType.Field(i).Type
-				inAddress, _ := getReflectAddress(inRefType, nil)
+				inAddress, _ := reflect2.GetAddress(inRefType, nil)
 				v.kahn.Add(inAddress, item.Address)
 			}
 
@@ -147,7 +150,7 @@ func (v *_container) prepare() error {
 
 func (v *_container) Invoke(obj interface{}) error {
 	if v.srv.IsOff() {
-		return errDepNotRunning
+		return errors2.ErrDepNotRunning
 	}
 	item, _, err := v.callArgs(obj)
 	if err != nil {
@@ -185,7 +188,7 @@ func (v *_container) callArgs(obj interface{}) (*objectStorageItem, []reflect.Va
 		args := make([]reflect.Value, 0, item.ReflectType.NumIn())
 		for i := 0; i < item.ReflectType.NumIn(); i++ {
 			inRefType := item.ReflectType.In(i)
-			inAddress, ok := getReflectAddress(inRefType, item.Value)
+			inAddress, ok := reflect2.GetAddress(inRefType, item.Value)
 			if !ok {
 				return nil, nil, fmt.Errorf("dependency [%s] is not supported", inAddress)
 			}
@@ -208,7 +211,7 @@ func (v *_container) callArgs(obj interface{}) (*objectStorageItem, []reflect.Va
 		args := make([]reflect.Value, 0, 1)
 		for i := 0; i < item.ReflectType.NumField(); i++ {
 			inRefType := item.ReflectType.Field(i)
-			inAddress, ok := getReflectAddress(inRefType.Type, nil)
+			inAddress, ok := reflect2.GetAddress(inRefType.Type, nil)
 			if !ok {
 				return nil, nil, fmt.Errorf("dependency [%s] is not supported", inAddress)
 			}
@@ -239,7 +242,7 @@ func (v *_container) run() error {
 	defer v.srv.IterateOver()
 
 	for _, name := range v.kahn.Result() {
-		if name == root || name == errName {
+		if name == root || name == reflect2.ErrorName {
 			continue
 		}
 		item, err := v.store.GetByAddress(name)
@@ -266,7 +269,7 @@ func (v *_container) run() error {
 				return errors.Wrapf(err, "initialize error")
 			}
 			if item, err = v.store.GetByReflect(arg.Type(), arg.Interface()); err != nil {
-				if errors.Is(err, errIsTypeError) {
+				if errors.Is(err, errors2.ErrIsTypeError) {
 					continue
 				}
 				return errors.Wrapf(err, "initialize error")

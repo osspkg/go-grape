@@ -8,16 +8,17 @@ package grape
 import (
 	"os"
 
+	"go.osspkg.com/grape/config"
 	"go.osspkg.com/logx"
 )
 
 type _log struct {
 	file    *os.File
 	handler logx.Logger
-	conf    LogConfig
+	conf    config.LogConfig
 }
 
-func newLog(conf LogConfig) *_log {
+func newLog(conf config.LogConfig) *_log {
 	file, err := os.OpenFile(conf.FilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		panic(err)

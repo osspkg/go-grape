@@ -3,109 +3,118 @@
  *  Use of this source code is governed by a BSD 3-Clause license that can be found in the LICENSE file.
  */
 
-package grape
+package services
 
 import (
 	"context"
 
 	"go.osspkg.com/errors"
+	errors2 "go.osspkg.com/grape/errors"
 	"go.osspkg.com/syncing"
 	"go.osspkg.com/xc"
 )
 
 type (
-	ServiceInterface interface {
+	TService interface {
 		Up() error
 		Down() error
 	}
-	ServiceXContextInterface interface {
+	TServiceXContext interface {
 		Up(ctx xc.Context) error
 		Down() error
 	}
-	ServiceContextInterface interface {
+	TServiceContext interface {
 		Up(ctx context.Context) error
 		Down() error
 	}
 )
 
-func isService(v interface{}) bool {
-	if _, ok := v.(ServiceContextInterface); ok {
+func IsService(v interface{}) bool {
+	if _, ok := v.(TServiceContext); ok {
 		return true
 	}
-	if _, ok := v.(ServiceXContextInterface); ok {
+	if _, ok := v.(TServiceXContext); ok {
 		return true
 	}
-	if _, ok := v.(ServiceInterface); ok {
+	if _, ok := v.(TService); ok {
 		return true
 	}
 	return false
 }
 
 func serviceCallUp(v interface{}, c xc.Context) error {
-	if vv, ok := v.(ServiceContextInterface); ok {
+	if vv, ok := v.(TServiceContext); ok {
 		return vv.Up(c.Context())
 	}
-	if vv, ok := v.(ServiceXContextInterface); ok {
+	if vv, ok := v.(TServiceXContext); ok {
 		return vv.Up(c)
 	}
-	if vv, ok := v.(ServiceInterface); ok {
+	if vv, ok := v.(TService); ok {
 		return vv.Up()
 	}
-	return errors.Wrapf(errServiceUnknown, "service [%T]", v)
+	return errors.Wrapf(errors2.ErrServiceUnknown, "service [%T]", v)
 }
 
 func serviceCallDown(v interface{}) error {
-	if vv, ok := v.(ServiceContextInterface); ok {
+	if vv, ok := v.(TServiceContext); ok {
 		return vv.Down()
 	}
-	if vv, ok := v.(ServiceXContextInterface); ok {
+	if vv, ok := v.(TServiceXContext); ok {
 		return vv.Down()
 	}
-	if vv, ok := v.(ServiceInterface); ok {
+	if vv, ok := v.(TService); ok {
 		return vv.Down()
 	}
-	return errors.Wrapf(errServiceUnknown, "service [%T]", v)
+	return errors.Wrapf(errors2.ErrServiceUnknown, "service [%T]", v)
 }
 
 /**********************************************************************************************************************/
 
 type (
-	treeItem struct {
-		Previous *treeItem
+	item struct {
+		Previous *item
 		Current  interface{}
-		Next     *treeItem
+		Next     *item
 	}
-	serviceTree struct {
-		tree   *treeItem
+	_services struct {
+		tree   *item
 		status syncing.Switch
 		ctx    xc.Context
 	}
+	TServices interface {
+		IsOn() bool
+		IsOff() bool
+		MakeAsUp() error
+		IterateOver()
+		AddAndUp(v interface{}) error
+		Down() error
+	}
 )
 
-func newServiceTree(ctx xc.Context) *serviceTree {
-	return &serviceTree{
+func New(ctx xc.Context) TServices {
+	return &_services{
 		tree:   nil,
 		ctx:    ctx,
 		status: syncing.NewSwitch(),
 	}
 }
 
-func (s *serviceTree) IsOn() bool {
+func (s *_services) IsOn() bool {
 	return s.status.IsOn()
 }
 
-func (s *serviceTree) IsOff() bool {
+func (s *_services) IsOff() bool {
 	return s.status.IsOff()
 }
 
-func (s *serviceTree) MakeAsUp() error {
+func (s *_services) MakeAsUp() error {
 	if !s.status.On() {
-		return errDepAlreadyRunning
+		return errors2.ErrDepAlreadyRunning
 	}
 	return nil
 }
 
-func (s *serviceTree) IterateOver() {
+func (s *_services) IterateOver() {
 	if s.tree == nil {
 		return
 	}
@@ -122,23 +131,23 @@ func (s *serviceTree) IterateOver() {
 }
 
 // AddAndUp - add new service and call up
-func (s *serviceTree) AddAndUp(v interface{}) error {
+func (s *_services) AddAndUp(v interface{}) error {
 	if s.IsOff() {
-		return errDepNotRunning
+		return errors2.ErrDepNotRunning
 	}
 
-	if !isService(v) {
-		return errors.Wrapf(errServiceUnknown, "service [%T]", v)
+	if !IsService(v) {
+		return errors.Wrapf(errors2.ErrServiceUnknown, "service [%T]", v)
 	}
 
 	if s.tree == nil {
-		s.tree = &treeItem{
+		s.tree = &item{
 			Previous: nil,
 			Current:  v,
 			Next:     nil,
 		}
 	} else {
-		n := &treeItem{
+		n := &item{
 			Previous: s.tree,
 			Current:  v,
 			Next:     nil,
@@ -151,10 +160,10 @@ func (s *serviceTree) AddAndUp(v interface{}) error {
 }
 
 // Down - stop all services
-func (s *serviceTree) Down() error {
+func (s *_services) Down() error {
 	var err0 error
 	if !s.status.Off() {
-		return errDepNotRunning
+		return errors2.ErrDepNotRunning
 	}
 	if s.tree == nil {
 		return nil

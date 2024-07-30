@@ -3,7 +3,7 @@
  *  Use of this source code is governed by a BSD 3-Clause license that can be found in the LICENSE file.
  */
 
-package grape
+package reflect
 
 import (
 	"fmt"
@@ -11,12 +11,12 @@ import (
 	"strings"
 )
 
-const errName = "error"
+const ErrorName = "error"
 
 var errType = reflect.TypeOf(new(error)).Elem()
 
 // nolint: gocyclo
-func getReflectAddress(t reflect.Type, v interface{}) (string, bool) {
+func GetAddress(t reflect.Type, v interface{}) (string, bool) {
 	if t == nil {
 		return "nil", false
 	}
@@ -32,7 +32,7 @@ func getReflectAddress(t reflect.Type, v interface{}) (string, bool) {
 		return fmt.Sprintf("0x%x.%s", p, t.String()), true
 	case reflect.Ptr:
 		if t.Implements(errType) {
-			return errName, false
+			return ErrorName, false
 		}
 		value := reflectAddressElem(t)
 		if value == "*" {
@@ -59,7 +59,7 @@ func getReflectAddress(t reflect.Type, v interface{}) (string, bool) {
 		value := reflectAddressElem(t)
 		return value, isNotSimple(value)
 	case reflect.Chan:
-		value, _ := getReflectAddress(t.Elem(), v)
+		value, _ := GetAddress(t.Elem(), v)
 		return fmt.Sprintf("chan %s", value), isNotSimple(value)
 	case reflect.Slice:
 		value := reflectAddressElem(t.Elem())
@@ -71,7 +71,7 @@ func getReflectAddress(t reflect.Type, v interface{}) (string, bool) {
 	return t.String(), false
 }
 
-func typingReflectPtr(vv []interface{}, call func(interface{}) error) ([]interface{}, error) {
+func TypingPtr(vv []interface{}, call func(interface{}) error) ([]interface{}, error) {
 	result := make([]interface{}, 0, len(vv))
 	for _, v := range vv {
 		ref := reflect.TypeOf(v)

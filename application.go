@@ -9,6 +9,11 @@ import (
 	"go.osspkg.com/config"
 	"go.osspkg.com/console"
 	"go.osspkg.com/events"
+	config2 "go.osspkg.com/grape/config"
+	"go.osspkg.com/grape/container"
+	"go.osspkg.com/grape/env"
+	"go.osspkg.com/grape/internal"
+	"go.osspkg.com/grape/reflect"
 	"go.osspkg.com/logx"
 	"go.osspkg.com/xc"
 )
@@ -33,7 +38,7 @@ type (
 		resolvers      []config.Resolver
 		configs        Modules
 		modules        Modules
-		packages       Container
+		packages       container.TContainer
 		logHandler     *_log
 		log            logx.Logger
 		appContext     xc.Context
@@ -48,7 +53,7 @@ func New() Grape {
 		resolvers:  make([]config.Resolver, 0, 2),
 		modules:    Modules{},
 		configs:    Modules{},
-		packages:   NewContainer(ctx),
+		packages:   container.New(ctx),
 		appContext: ctx,
 		exitFunc:   func(_ int) {},
 	}
@@ -208,7 +213,7 @@ func (a *_grape) Call(call interface{}) {
 func (a *_grape) prepareConfig(interactive bool) {
 	var err error
 	if len(a.configFilePath) == 0 {
-		a.logHandler = newLog(LogConfig{
+		a.logHandler = newLog(config2.LogConfig{
 			Level:    4,
 			FilePath: "/dev/stdout",
 			Format:   "string",
@@ -227,7 +232,7 @@ func (a *_grape) prepareConfig(interactive bool) {
 		if err = resolver.Build(); err != nil {
 			console.FatalIfErr(err, "prepare config file: %s", a.configFilePath)
 		}
-		appConfig := &Config{}
+		appConfig := &config2.Config{}
 		if err = resolver.Decode(appConfig); err != nil {
 			console.FatalIfErr(err, "decode config file: %s", a.configFilePath)
 		}
@@ -243,12 +248,12 @@ func (a *_grape) prepareConfig(interactive bool) {
 		}
 		a.logHandler.Handler(a.log)
 		a.modules = a.modules.Add(
-			ENV(appConfig.Env),
+			env.ENV(appConfig.Env),
 		)
 
 		// decode all configs
 		var configs []interface{}
-		configs, err = typingReflectPtr(a.configs, func(c interface{}) error {
+		configs, err = reflect.TypingPtr(a.configs, func(c interface{}) error {
 			return resolver.Decode(c)
 		})
 		if err != nil {
@@ -259,7 +264,7 @@ func (a *_grape) prepareConfig(interactive bool) {
 		a.modules = a.modules.Add(configs...)
 
 		if !interactive && len(a.pidFilePath) > 0 {
-			if err = pid2file(a.pidFilePath); err != nil {
+			if err = internal.SavePidToFile(a.pidFilePath); err != nil {
 				a.log.WithFields(logx.Fields{
 					"err":  err.Error(),
 					"file": a.pidFilePath,

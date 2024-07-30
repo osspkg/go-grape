@@ -3,7 +3,7 @@
  *  Use of this source code is governed by a BSD 3-Clause license that can be found in the LICENSE file.
  */
 
-package grape
+package internal
 
 import (
 	"os"
@@ -11,7 +11,7 @@ import (
 	"syscall"
 )
 
-func pid2file(filename string) error {
+func SavePidToFile(filename string) error {
 	pid := strconv.Itoa(syscall.Getpid())
 	return os.WriteFile(filename, []byte(pid), 0755)
 }

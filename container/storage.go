@@ -3,12 +3,16 @@
  *  Use of this source code is governed by a BSD 3-Clause license that can be found in the LICENSE file.
  */
 
-package grape
+package container
 
 import (
 	"fmt"
 	"reflect"
 	"sync"
+
+	"go.osspkg.com/grape/errors"
+	reflect2 "go.osspkg.com/grape/reflect"
+	"go.osspkg.com/grape/services"
 )
 
 type (
@@ -60,10 +64,10 @@ func (v *objectStorage) GetByReflect(ref reflect.Type, obj interface{}) (*object
 	v.mux.RLock()
 	defer v.mux.RUnlock()
 
-	address, ok := getReflectAddress(ref, obj)
+	address, ok := reflect2.GetAddress(ref, obj)
 	if !ok {
-		if address == errName {
-			return nil, errIsTypeError
+		if address == reflect2.ErrorName {
+			return nil, errors.ErrIsTypeError
 		}
 		return nil, fmt.Errorf("dependency [%s] is not supported", address)
 	}
@@ -74,9 +78,9 @@ func (v *objectStorage) Add(ref reflect.Type, obj interface{}, relationType obje
 	v.mux.Lock()
 	defer v.mux.Unlock()
 
-	address, ok := getReflectAddress(ref, obj)
+	address, ok := reflect2.GetAddress(ref, obj)
 	if !ok {
-		if address != errName {
+		if address != reflect2.ErrorName {
 			return fmt.Errorf("dependency [%s] is not supported", address)
 		}
 		return nil
@@ -87,7 +91,7 @@ func (v *objectStorage) Add(ref reflect.Type, obj interface{}, relationType obje
 		}
 	}
 	serviceStatus := itNotService
-	if isService(obj) {
+	if services.IsService(obj) {
 		serviceStatus = itDownService
 	}
 	v.data[address] = &objectStorageItem{
