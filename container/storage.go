@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"sync"
 
-	"go.osspkg.com/grape/errors"
+	"go.osspkg.com/grape/errs"
 	reflect2 "go.osspkg.com/grape/reflect"
 	"go.osspkg.com/grape/services"
 )
@@ -67,7 +67,7 @@ func (v *objectStorage) GetByReflect(ref reflect.Type, obj interface{}) (*object
 	address, ok := reflect2.GetAddress(ref, obj)
 	if !ok {
 		if address == reflect2.ErrorName {
-			return nil, errors.ErrIsTypeError
+			return nil, errs.ErrIsTypeError
 		}
 		return nil, fmt.Errorf("dependency [%s] is not supported", address)
 	}

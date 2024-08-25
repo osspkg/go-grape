@@ -5,6 +5,8 @@
 
 package config
 
+import "go.osspkg.com/logx"
+
 type (
 	// Config config model
 	Config struct {
@@ -14,7 +16,18 @@ type (
 
 	LogConfig struct {
 		Level    uint32 `yaml:"level"`
-		FilePath string `yaml:"file_path"`
+		FilePath string `yaml:"file_path,omitempty"`
 		Format   string `yaml:"format"`
 	}
 )
+
+func Default() *Config {
+	return &Config{
+		Env: "DEV",
+		Log: LogConfig{
+			Level:    logx.LevelDebug,
+			FilePath: "/dev/stdout",
+			Format:   "string",
+		},
+	}
+}

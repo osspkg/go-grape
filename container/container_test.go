@@ -77,14 +77,14 @@ type SimpleDI1_Service struct {
 
 func (v *SimpleDI1_Service) Up() error {
 	if len(v.ErrUp) > 0 {
-		return fmt.Errorf(v.ErrUp)
+		return fmt.Errorf(v.ErrUp) // nolint: govet
 	}
 	return nil
 }
 
 func (v *SimpleDI1_Service) Down() error {
 	if len(v.ErrDown) > 0 {
-		return fmt.Errorf(v.ErrDown)
+		return fmt.Errorf(v.ErrDown) // nolint: govet
 	}
 	return nil
 }
@@ -351,7 +351,7 @@ func TestUnit_DI_Default(t *testing.T) {
 				&SimpleDI1_A{A: "123"},
 				SimpleDI1_Struct{},
 				func(s SimpleDI1_Struct) error {
-					return fmt.Errorf(s.AA.A)
+					return fmt.Errorf(s.AA.A) // nolint: govet
 				},
 			},
 			wantErr:       true,
@@ -362,6 +362,8 @@ func TestUnit_DI_Default(t *testing.T) {
 			register: []interface{}{
 				SimpleString("QWERT"),
 				func(s SimpleString) error {
+					// nolint: govet
+					// nolint: staticcheck
 					return fmt.Errorf(string(s))
 				},
 			},

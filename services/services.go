@@ -9,7 +9,7 @@ import (
 	"context"
 
 	"go.osspkg.com/errors"
-	errors2 "go.osspkg.com/grape/errors"
+	"go.osspkg.com/grape/errs"
 	"go.osspkg.com/syncing"
 	"go.osspkg.com/xc"
 )
@@ -52,7 +52,7 @@ func serviceCallUp(v interface{}, c xc.Context) error {
 	if vv, ok := v.(TService); ok {
 		return vv.Up()
 	}
-	return errors.Wrapf(errors2.ErrServiceUnknown, "service [%T]", v)
+	return errors.Wrapf(errs.ErrServiceUnknown, "service [%T]", v)
 }
 
 func serviceCallDown(v interface{}) error {
@@ -65,7 +65,7 @@ func serviceCallDown(v interface{}) error {
 	if vv, ok := v.(TService); ok {
 		return vv.Down()
 	}
-	return errors.Wrapf(errors2.ErrServiceUnknown, "service [%T]", v)
+	return errors.Wrapf(errs.ErrServiceUnknown, "service [%T]", v)
 }
 
 /**********************************************************************************************************************/
@@ -109,7 +109,7 @@ func (s *_services) IsOff() bool {
 
 func (s *_services) MakeAsUp() error {
 	if !s.status.On() {
-		return errors2.ErrDepAlreadyRunning
+		return errs.ErrDepAlreadyRunning
 	}
 	return nil
 }
@@ -133,11 +133,11 @@ func (s *_services) IterateOver() {
 // AddAndUp - add new service and call up
 func (s *_services) AddAndUp(v interface{}) error {
 	if s.IsOff() {
-		return errors2.ErrDepNotRunning
+		return errs.ErrDepNotRunning
 	}
 
 	if !IsService(v) {
-		return errors.Wrapf(errors2.ErrServiceUnknown, "service [%T]", v)
+		return errors.Wrapf(errs.ErrServiceUnknown, "service [%T]", v)
 	}
 
 	if s.tree == nil {
@@ -163,7 +163,7 @@ func (s *_services) AddAndUp(v interface{}) error {
 func (s *_services) Down() error {
 	var err0 error
 	if !s.status.Off() {
-		return errors2.ErrDepNotRunning
+		return errs.ErrDepNotRunning
 	}
 	if s.tree == nil {
 		return nil

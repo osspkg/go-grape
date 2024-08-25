@@ -18,38 +18,40 @@ import (
 	"go.osspkg.com/xc"
 )
 
-type (
-	Grape interface {
-		Logger(log logx.Logger) Grape
-		Modules(modules ...interface{}) Grape
-		ConfigResolvers(res ...config.Resolver) Grape
-		ConfigFile(filename string) Grape
-		ConfigModels(configs ...interface{}) Grape
-		PidFile(filename string) Grape
-		Run()
-		Invoke(call interface{})
-		Call(call interface{})
-		ExitFunc(call func(code int)) Grape
-	}
+type AppName string
 
-	_grape struct {
-		configFilePath string
-		pidFilePath    string
-		resolvers      []config.Resolver
-		configs        Modules
-		modules        Modules
-		packages       container.TContainer
-		logHandler     *_log
-		log            logx.Logger
-		appContext     xc.Context
-		exitFunc       func(code int)
-	}
-)
+type Grape interface {
+	Logger(log logx.Logger) Grape
+	Modules(modules ...interface{}) Grape
+	ConfigResolvers(res ...config.Resolver) Grape
+	ConfigFile(filename string) Grape
+	ConfigModels(configs ...interface{}) Grape
+	PidFile(filename string) Grape
+	Run()
+	Invoke(call interface{})
+	Call(call interface{})
+	ExitFunc(call func(code int)) Grape
+}
+
+type _grape struct {
+	appName        string
+	configFilePath string
+	pidFilePath    string
+	resolvers      []config.Resolver
+	configs        Modules
+	modules        Modules
+	packages       container.TContainer
+	logHandler     *_log
+	log            logx.Logger
+	appContext     xc.Context
+	exitFunc       func(code int)
+}
 
 // New create application
-func New() Grape {
+func New(appName string) Grape {
 	ctx := xc.New()
 	return &_grape{
+		appName:    appName,
 		resolvers:  make([]config.Resolver, 0, 2),
 		modules:    Modules{},
 		configs:    Modules{},
@@ -212,65 +214,38 @@ func (a *_grape) Call(call interface{}) {
 
 func (a *_grape) prepareConfig(interactive bool) {
 	var err error
-	if len(a.configFilePath) == 0 {
-		a.logHandler = newLog(config2.LogConfig{
-			Level:    4,
-			FilePath: "/dev/stdout",
-			Format:   "string",
-		})
-		if a.log == nil {
-			a.log = logx.Default()
-		}
-		a.logHandler.Handler(a.log)
-	}
+	appConfig := config2.Default()
+
+	// read config file
+	resolver := config.New(a.resolvers...)
 	if len(a.configFilePath) > 0 {
-		// read config file
-		resolver := config.New(a.resolvers...)
-		if err = resolver.OpenFile(a.configFilePath); err != nil {
-			console.FatalIfErr(err, "open config file: %s", a.configFilePath)
-		}
-		if err = resolver.Build(); err != nil {
-			console.FatalIfErr(err, "prepare config file: %s", a.configFilePath)
-		}
-		appConfig := &config2.Config{}
-		if err = resolver.Decode(appConfig); err != nil {
-			console.FatalIfErr(err, "decode config file: %s", a.configFilePath)
-		}
-		if interactive {
-			appConfig.Log.Level = 4
-			appConfig.Log.FilePath = "/dev/stdout"
-		}
+		console.FatalIfErr(resolver.OpenFile(a.configFilePath), "Open config file: %s", a.configFilePath)
+	}
+	console.FatalIfErr(resolver.Build(), "Prepare config file: %s", a.configFilePath)
+	if !interactive {
+		console.FatalIfErr(resolver.Decode(appConfig), "Decode config file: %s", a.configFilePath)
+	}
 
-		// init logger
-		a.logHandler = newLog(appConfig.Log)
-		if a.log == nil {
-			a.log = logx.Default()
-		}
-		a.logHandler.Handler(a.log)
-		a.modules = a.modules.Add(
-			env.ENV(appConfig.Env),
-		)
+	// init logger
+	a.logHandler = newLog(a.appName, appConfig.Log)
+	if a.log == nil {
+		a.log = logx.Default()
+	}
+	a.logHandler.Handler(a.log)
+	a.modules = a.modules.Add(
+		env.ENV(appConfig.Env),
+	)
 
-		// decode all configs
-		var configs []interface{}
-		configs, err = reflect.TypingPtr(a.configs, func(c interface{}) error {
-			return resolver.Decode(c)
-		})
-		if err != nil {
-			a.log.WithFields(logx.Fields{
-				"err": err.Error(),
-			}).Fatalf("Decode config file")
-		}
-		a.modules = a.modules.Add(configs...)
+	// decode all configs
+	var configs []interface{}
+	configs, err = reflect.TypingPtr(a.configs, func(c interface{}) error {
+		return resolver.Decode(c)
+	})
+	console.FatalIfErr(err, "Decode config file: %s", a.configFilePath)
+	a.modules = a.modules.Add(configs...)
 
-		if !interactive && len(a.pidFilePath) > 0 {
-			if err = internal.SavePidToFile(a.pidFilePath); err != nil {
-				a.log.WithFields(logx.Fields{
-					"err":  err.Error(),
-					"file": a.pidFilePath,
-				}).Fatalf("Create pid file")
-			}
-		}
+	if !interactive && len(a.pidFilePath) > 0 {
+		console.FatalIfErr(internal.SavePidToFile(a.pidFilePath), "Create pid file: %s", a.pidFilePath)
 	}
 	a.modules = a.modules.Add(
 		func() logx.Logger { return a.log },
@@ -288,12 +263,10 @@ func (a *_grape) steps(up []step, wait func(bool), down []step) bool {
 
 	for _, s := range up {
 		if len(s.Message) > 0 {
-			a.log.Infof(s.Message)
+			a.log.Info(s.Message)
 		}
 		if err := s.Call(); err != nil {
-			a.log.WithFields(logx.Fields{
-				"err": err.Error(),
-			}).Errorf(s.Message)
+			a.log.Error(s.Message, "err", err)
 			erc++
 			break
 		}
@@ -303,12 +276,10 @@ func (a *_grape) steps(up []step, wait func(bool), down []step) bool {
 
 	for _, s := range down {
 		if len(s.Message) > 0 {
-			a.log.Infof(s.Message)
+			a.log.Info(s.Message)
 		}
 		if err := s.Call(); err != nil {
-			a.log.WithFields(logx.Fields{
-				"err": err.Error(),
-			}).Errorf(s.Message)
+			a.log.Error(s.Message, "err", err)
 			erc++
 		}
 	}

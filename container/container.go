@@ -11,7 +11,7 @@ import (
 
 	"go.osspkg.com/algorithms/graph/kahn"
 	"go.osspkg.com/errors"
-	errors2 "go.osspkg.com/grape/errors"
+	"go.osspkg.com/grape/errs"
 	reflect2 "go.osspkg.com/grape/reflect"
 	"go.osspkg.com/grape/services"
 	"go.osspkg.com/syncing"
@@ -55,7 +55,7 @@ func (v *_container) Stop() error {
 // Start - initialize dependencies and start
 func (v *_container) Start() error {
 	if !v.status.On() {
-		return errors2.ErrDepAlreadyRunning
+		return errs.ErrDepAlreadyRunning
 	}
 	if err := v.srv.MakeAsUp(); err != nil {
 		return err
@@ -71,7 +71,7 @@ func (v *_container) Start() error {
 
 func (v *_container) Register(items ...interface{}) error {
 	if v.srv.IsOn() {
-		return errors2.ErrDepAlreadyRunning
+		return errs.ErrDepAlreadyRunning
 	}
 
 	for _, item := range items {
@@ -91,17 +91,17 @@ func (v *_container) Register(items ...interface{}) error {
 
 func (v *_container) BreakPoint(item interface{}) error {
 	if v.srv.IsOn() {
-		return errors2.ErrDepAlreadyRunning
+		return errs.ErrDepAlreadyRunning
 	}
 	ref := reflect.TypeOf(item)
 	switch ref.Kind() {
 	case reflect.Func:
 	default:
-		return errors2.ErrBreakPointType
+		return errs.ErrBreakPointType
 	}
 	address, ok := reflect2.GetAddress(ref, item)
 	if !ok {
-		return errors2.ErrBreakPointAddress
+		return errs.ErrBreakPointAddress
 	}
 	v.kahn.BreakPoint(address)
 	return nil
@@ -150,7 +150,7 @@ func (v *_container) prepare() error {
 
 func (v *_container) Invoke(obj interface{}) error {
 	if v.srv.IsOff() {
-		return errors2.ErrDepNotRunning
+		return errs.ErrDepNotRunning
 	}
 	item, _, err := v.callArgs(obj)
 	if err != nil {
@@ -269,7 +269,7 @@ func (v *_container) run() error {
 				return errors.Wrapf(err, "initialize error")
 			}
 			if item, err = v.store.GetByReflect(arg.Type(), arg.Interface()); err != nil {
-				if errors.Is(err, errors2.ErrIsTypeError) {
+				if errors.Is(err, errs.ErrIsTypeError) {
 					continue
 				}
 				return errors.Wrapf(err, "initialize error")

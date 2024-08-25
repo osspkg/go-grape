@@ -6,11 +6,32 @@
 package grape_test
 
 import (
+	"os"
 	"testing"
 
 	"go.osspkg.com/casecheck"
 	"go.osspkg.com/grape"
+	"go.osspkg.com/logx"
+	"go.osspkg.com/xc"
 )
+
+func TestUnit_NewAppSyslog(t *testing.T) {
+	t.Skip()
+	configData := `
+env: dev
+log:
+  level: 4
+  format: syslog
+`
+	os.WriteFile("/tmp/TestUnit_NewApp.yaml", []byte(configData), 0755)
+	app := grape.New("testapp")
+	app.ConfigFile("/tmp/TestUnit_NewApp.yaml")
+	app.Modules(func(ctx xc.Context) {
+		logx.Info("hello")
+		ctx.Close()
+	})
+	app.Run()
+}
 
 func TestUnit_AppInvoke(t *testing.T) {
 	out := ""
@@ -18,7 +39,7 @@ func TestUnit_AppInvoke(t *testing.T) {
 		s.Do(&out)
 		out += "Done"
 	}
-	grape.New().Modules(
+	grape.New("testapp").Modules(
 		&Struct1{}, &Struct2{},
 	).Invoke(call1)
 	casecheck.Equal(t, "[Struct1.Do]Done", out)
@@ -28,7 +49,7 @@ func TestUnit_AppInvoke(t *testing.T) {
 		s.Do2(&out)
 		out += "Done"
 	}
-	grape.New().ExitFunc(func(code int) {
+	grape.New("testapp").ExitFunc(func(code int) {
 		t.Log("Exit Code", code)
 		casecheck.Equal(t, 0, code)
 	}).Modules(
