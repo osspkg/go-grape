@@ -5,7 +5,7 @@ go 1.21
 require (
 	go.osspkg.com/algorithms v1.4.1
 	go.osspkg.com/casecheck v0.3.0
-	go.osspkg.com/config v0.1.2
+	go.osspkg.com/config v0.1.3
 	go.osspkg.com/console v0.3.3
 	go.osspkg.com/errors v0.3.1
 	go.osspkg.com/events v0.3.0

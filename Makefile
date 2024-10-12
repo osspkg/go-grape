@@ -23,8 +23,8 @@ build:
 tests:
 	devtool test
 
-.PHONY: pre-commite
-pre-commite: setup lint build tests
+.PHONY: pre-commit
+pre-commit: setup lint build tests
 
 .PHONY: ci
 ci: install setup lint build tests

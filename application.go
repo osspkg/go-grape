@@ -33,19 +33,26 @@ type Grape interface {
 	ExitFunc(call func(code int)) Grape
 }
 
-type _grape struct {
-	appName        string
-	configFilePath string
-	pidFilePath    string
-	resolvers      []config.Resolver
-	configs        Modules
-	modules        Modules
-	packages       container.TContainer
-	logHandler     *_log
-	logger         logx.Logger
-	appContext     xc.Context
-	exitFunc       func(code int)
-}
+type (
+	_conf struct {
+		FileName string
+		Data     string
+		DataExt  string
+	}
+	_grape struct {
+		appName     string
+		config      _conf
+		pidFilePath string
+		resolvers   []config.Resolver
+		configs     Modules
+		modules     Modules
+		packages    container.TContainer
+		logHandler  *_log
+		logger      logx.Logger
+		appContext  xc.Context
+		exitFunc    func(code int)
+	}
+)
 
 // New create application
 func New(appName string) Grape {
@@ -82,7 +89,18 @@ func (a *_grape) Modules(modules ...interface{}) Grape {
 
 // ConfigFile set config file path
 func (a *_grape) ConfigFile(filename string) Grape {
-	a.configFilePath = filename
+	a.config = _conf{
+		FileName: filename,
+	}
+	return a
+}
+
+// ConfigData set config data
+func (a *_grape) ConfigData(data, ext string) Grape {
+	a.config = _conf{
+		Data:    data,
+		DataExt: ext,
+	}
 	return a
 }
 
@@ -218,12 +236,15 @@ func (a *_grape) prepareConfig(interactive bool) {
 
 	// read config file
 	resolver := config.New(a.resolvers...)
-	if len(a.configFilePath) > 0 {
-		console.FatalIfErr(resolver.OpenFile(a.configFilePath), "Open config file: %s", a.configFilePath)
+	switch true {
+	case len(a.config.Data) > 0:
+		resolver.OpenBlob(a.config.Data, a.config.DataExt)
+	case len(a.config.FileName) > 0:
+		console.FatalIfErr(resolver.OpenFile(a.config.FileName), "Open config file: %s", a.config)
 	}
-	console.FatalIfErr(resolver.Build(), "Prepare config file: %s", a.configFilePath)
+	console.FatalIfErr(resolver.Build(), "Prepare config file: %s", a.config)
 	if !interactive {
-		console.FatalIfErr(resolver.Decode(appConfig), "Decode config file: %s", a.configFilePath)
+		console.FatalIfErr(resolver.Decode(appConfig), "Decode config file: %s", a.config)
 	}
 
 	// init logger
@@ -242,7 +263,7 @@ func (a *_grape) prepareConfig(interactive bool) {
 	configs, err = reflect.TypingPtr(a.configs, func(c interface{}) error {
 		return resolver.Decode(c)
 	})
-	console.FatalIfErr(err, "Decode config file: %s", a.configFilePath)
+	console.FatalIfErr(err, "Decode config file: %s", a.config)
 	a.modules = a.modules.Add(configs...)
 
 	if !interactive && len(a.pidFilePath) > 0 {
