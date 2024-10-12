@@ -42,7 +42,7 @@ type _grape struct {
 	modules        Modules
 	packages       container.TContainer
 	logHandler     *_log
-	log            logx.Logger
+	logger         logx.Logger
 	appContext     xc.Context
 	exitFunc       func(code int)
 }
@@ -63,7 +63,7 @@ func New(appName string) Grape {
 
 // Logger setup logger
 func (a *_grape) Logger(l logx.Logger) Grape {
-	a.log = l
+	a.logger = l
 	return a
 }
 
@@ -227,11 +227,12 @@ func (a *_grape) prepareConfig(interactive bool) {
 	}
 
 	// init logger
-	a.logHandler = newLog(a.appName, appConfig.Log)
-	if a.log == nil {
-		a.log = logx.Default()
+	if a.logger == nil {
+		a.logger = logx.Default()
 	}
-	a.logHandler.Handler(a.log)
+	a.logHandler = initGlobalLogger(a.appName, appConfig.Log, a.logger)
+
+	// set env
 	a.modules = a.modules.Add(
 		env.ENV(appConfig.Env),
 	)
@@ -248,7 +249,7 @@ func (a *_grape) prepareConfig(interactive bool) {
 		console.FatalIfErr(internal.SavePidToFile(a.pidFilePath), "Create pid file: %s", a.pidFilePath)
 	}
 	a.modules = a.modules.Add(
-		func() logx.Logger { return a.log },
+		func() logx.Logger { return a.logger },
 		func() xc.Context { return a.appContext },
 	)
 }
@@ -263,10 +264,10 @@ func (a *_grape) steps(up []step, wait func(bool), down []step) bool {
 
 	for _, s := range up {
 		if len(s.Message) > 0 {
-			a.log.Info(s.Message)
+			a.logger.Info(s.Message)
 		}
 		if err := s.Call(); err != nil {
-			a.log.Error(s.Message, "err", err)
+			a.logger.Error(s.Message, "err", err)
 			erc++
 			break
 		}
@@ -276,10 +277,10 @@ func (a *_grape) steps(up []step, wait func(bool), down []step) bool {
 
 	for _, s := range down {
 		if len(s.Message) > 0 {
-			a.log.Info(s.Message)
+			a.logger.Info(s.Message)
 		}
 		if err := s.Call(); err != nil {
-			a.log.Error(s.Message, "err", err)
+			a.logger.Error(s.Message, "err", err)
 			erc++
 		}
 	}

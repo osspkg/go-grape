@@ -10,10 +10,16 @@ import (
 	"log/syslog"
 	"net/url"
 	"os"
+	"sync"
 
 	"go.osspkg.com/console"
 	"go.osspkg.com/grape/config"
 	"go.osspkg.com/logx"
+)
+
+var (
+	instance *_log = nil
+	mux            = sync.Mutex{}
 )
 
 type _log struct {
@@ -22,11 +28,21 @@ type _log struct {
 	conf    config.LogConfig
 }
 
-func newLog(tag string, conf config.LogConfig) *_log {
+func initGlobalLogger(tag string, conf config.LogConfig, handler logx.Logger) *_log {
 	var err error
-	object := &_log{
-		conf: conf,
+
+	mux.Lock()
+	defer mux.Unlock()
+
+	if instance != nil {
+		return instance
 	}
+
+	instance = &_log{
+		conf:    conf,
+		handler: handler,
+	}
+
 	switch conf.Format {
 	case "syslog":
 		defer func() {
@@ -38,31 +54,39 @@ func newLog(tag string, conf config.LogConfig) *_log {
 		if uri, err0 := url.Parse(conf.FilePath); err0 == nil {
 			network, addr = uri.Scheme, uri.Host
 		}
-		object.file, err = syslog.Dial(network, addr, syslog.LOG_INFO, tag)
+		instance.file, err = syslog.Dial(network, addr, syslog.LOG_INFO, tag)
 	default:
-		object.file, err = os.OpenFile(conf.FilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		instance.file, err = os.OpenFile(conf.FilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	}
 	if err != nil {
 		panic(err)
 	}
-	return object
-}
 
-func (v *_log) Handler(l logx.Logger) {
-	v.handler = l
-	v.handler.SetOutput(v.file)
-	v.handler.SetLevel(v.conf.Level)
+	instance.handler.SetOutput(instance.file)
+	instance.handler.SetLevel(instance.conf.Level)
 
-	switch v.conf.Format {
+	switch instance.conf.Format {
 	case "string", "syslog":
 		strFmt := logx.NewFormatString()
 		strFmt.SetDelimiter(' ')
-		v.handler.SetFormatter(strFmt)
+		instance.handler.SetFormatter(strFmt)
 	case "json":
-		v.handler.SetFormatter(logx.NewFormatJSON())
+		instance.handler.SetFormatter(logx.NewFormatJSON())
 	}
+
+	return instance
 }
 
 func (v *_log) Close() error {
-	return v.file.Close()
+	mux.Lock()
+	defer mux.Unlock()
+
+	err := v.file.Close()
+	instance = nil
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
