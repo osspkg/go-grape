@@ -25,6 +25,7 @@ type Grape interface {
 	Modules(modules ...interface{}) Grape
 	ConfigResolvers(res ...config.Resolver) Grape
 	ConfigFile(filename string) Grape
+	ConfigData(data, ext string) Grape
 	ConfigModels(configs ...interface{}) Grape
 	PidFile(filename string) Grape
 	Run()
