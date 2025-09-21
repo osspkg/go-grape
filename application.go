@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2024 Mikhail Knyazhev <markus621@yandex.ru>. All rights reserved.
+ *  Copyright (c) 2024-2025 Mikhail Knyazhev <markus621@yandex.com>. All rights reserved.
  *  Use of this source code is governed by a BSD 3-Clause license that can be found in the LICENSE file.
  */
 
@@ -9,13 +9,14 @@ import (
 	"go.osspkg.com/config"
 	"go.osspkg.com/console"
 	"go.osspkg.com/events"
+	"go.osspkg.com/logx"
+	"go.osspkg.com/xc"
+
 	config2 "go.osspkg.com/grape/config"
 	"go.osspkg.com/grape/container"
 	"go.osspkg.com/grape/env"
 	"go.osspkg.com/grape/internal"
 	"go.osspkg.com/grape/reflect"
-	"go.osspkg.com/logx"
-	"go.osspkg.com/xc"
 )
 
 type AppName string
@@ -115,9 +116,7 @@ func (a *_grape) ConfigModels(configs ...interface{}) Grape {
 
 // ConfigResolvers set configs resolvers
 func (a *_grape) ConfigResolvers(crs ...config.Resolver) Grape {
-	for _, r := range crs {
-		a.resolvers = append(a.resolvers, r)
-	}
+	a.resolvers = append(a.resolvers, crs...)
 	return a
 }
 

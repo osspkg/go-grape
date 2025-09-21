@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2024 Mikhail Knyazhev <markus621@yandex.ru>. All rights reserved.
+ *  Copyright (c) 2024-2025 Mikhail Knyazhev <markus621@yandex.com>. All rights reserved.
  *  Use of this source code is governed by a BSD 3-Clause license that can be found in the LICENSE file.
  */
 
@@ -11,11 +11,12 @@ import (
 
 	"go.osspkg.com/algorithms/graph/kahn"
 	"go.osspkg.com/errors"
+	"go.osspkg.com/syncing"
+	"go.osspkg.com/xc"
+
 	"go.osspkg.com/grape/errs"
 	reflect2 "go.osspkg.com/grape/reflect"
 	"go.osspkg.com/grape/services"
-	"go.osspkg.com/syncing"
-	"go.osspkg.com/xc"
 )
 
 type (
@@ -229,7 +230,7 @@ func (v *_container) callArgs(obj interface{}) (*objectStorageItem, []reflect.Va
 	return item, []reflect.Value{reflect.ValueOf(item.Value)}, nil
 }
 
-// nolint: gocyclo
+//nolint:gocyclo
 func (v *_container) run() error {
 	names := make(map[string]struct{})
 	for _, name := range v.kahn.Result() {

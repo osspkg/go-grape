@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2024 Mikhail Knyazhev <markus621@yandex.ru>. All rights reserved.
+ *  Copyright (c) 2024-2025 Mikhail Knyazhev <markus621@yandex.com>. All rights reserved.
  *  Use of this source code is governed by a BSD 3-Clause license that can be found in the LICENSE file.
  */
 
@@ -39,9 +39,10 @@ func TestUnit_AppInvoke(t *testing.T) {
 		s.Do(&out)
 		out += "Done"
 	}
-	grape.New("testapp").Modules(
-		&Struct1{}, &Struct2{},
-	).Invoke(call1)
+	grape.New("testapp").
+		ConfigData(`env: dev`, `.yaml`).
+		Modules(&Struct1{}, &Struct2{}).
+		Invoke(call1)
 	casecheck.Equal(t, "[Struct1.Do]Done", out)
 
 	out = ""
@@ -49,12 +50,14 @@ func TestUnit_AppInvoke(t *testing.T) {
 		s.Do2(&out)
 		out += "Done"
 	}
-	grape.New("testapp").ExitFunc(func(code int) {
-		t.Log("Exit Code", code)
-		casecheck.Equal(t, 0, code)
-	}).Modules(
-		NewStruct1, &Struct2{},
-	).Invoke(call1)
+	grape.New("testapp").
+		ConfigData(`env: dev`, `.yaml`).
+		ExitFunc(func(code int) {
+			t.Log("Exit Code", code)
+			casecheck.Equal(t, 0, code)
+		}).
+		Modules(NewStruct1, &Struct2{}).
+		Invoke(call1)
 	casecheck.Equal(t, "[Struct1.Do][Struct2.Do]Done", out)
 }
 
