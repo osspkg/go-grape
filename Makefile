@@ -1,31 +1,29 @@
+SHELL=/bin/bash
 
 .PHONY: install
 install:
-	go install github.com/osspkg/devtool@latest
-
-.PHONY: setup
-setup:
-	devtool setup-lib
+	go install go.osspkg.com/goppy/v2/cmd/goppy@latest
+	goppy setup-lib
 
 .PHONY: lint
 lint:
-	devtool lint
+	goppy lint
 
 .PHONY: license
 license:
-	devtool license
+	goppy license
 
 .PHONY: build
 build:
-	devtool build --arch=amd64
+	goppy build --arch=amd64
 
 .PHONY: tests
 tests:
-	devtool test
+	goppy test
 
 .PHONY: pre-commit
-pre-commit: setup lint build tests
+pre-commit: install license lint tests build
 
 .PHONY: ci
-ci: install setup lint build tests
+ci: pre-commit
 

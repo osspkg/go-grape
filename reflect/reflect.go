@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2024 Mikhail Knyazhev <markus621@yandex.ru>. All rights reserved.
+ *  Copyright (c) 2024-2025 Mikhail Knyazhev <markus621@yandex.com>. All rights reserved.
  *  Use of this source code is governed by a BSD 3-Clause license that can be found in the LICENSE file.
  */
 
@@ -15,12 +15,14 @@ const ErrorName = "error"
 
 var errType = reflect.TypeOf(new(error)).Elem()
 
-// nolint: gocyclo
+//nolint:gocyclo
 func GetAddress(t reflect.Type, v interface{}) (string, bool) {
 	if t == nil {
 		return "nil", false
 	}
+
 	switch t.Kind() {
+
 	case reflect.Func:
 		if len(t.PkgPath()) > 0 {
 			return reflectAddressElem(t), true
@@ -30,6 +32,7 @@ func GetAddress(t reflect.Type, v interface{}) (string, bool) {
 		}
 		p := reflect.ValueOf(v).Pointer()
 		return fmt.Sprintf("0x%x.%s", p, t.String()), true
+
 	case reflect.Ptr:
 		if t.Implements(errType) {
 			return ErrorName, false
@@ -39,16 +42,19 @@ func GetAddress(t reflect.Type, v interface{}) (string, bool) {
 			return "*struct{}", false
 		}
 		return value, true
+
 	case reflect.Map:
 		key := reflectAddressElem(t.Key())
 		value := reflectAddressElem(t.Elem())
 		return fmt.Sprintf("map[%s]%s", key, value), isNotSimple(key) && isNotSimple(value)
+
 	case reflect.Struct:
 		value := reflectAddressElem(t)
 		if len(value) == 0 {
 			return "struct{}", false
 		}
 		return value, true
+
 	case reflect.Bool,
 		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
@@ -58,17 +64,22 @@ func GetAddress(t reflect.Type, v interface{}) (string, bool) {
 		reflect.Interface:
 		value := reflectAddressElem(t)
 		return value, isNotSimple(value)
+
 	case reflect.Chan:
 		value, _ := GetAddress(t.Elem(), v)
 		return fmt.Sprintf("chan %s", value), isNotSimple(value)
+
 	case reflect.Slice:
 		value := reflectAddressElem(t.Elem())
 		return fmt.Sprintf("[]%s", value), isNotSimple(value)
+
 	case reflect.Array:
 		value := reflectAddressElem(t.Elem())
 		return fmt.Sprintf("[%d]%s", t.Len(), value), isNotSimple(value)
+
+	default:
+		return t.String(), false
 	}
-	return t.String(), false
 }
 
 func TypingPtr(vv []interface{}, call func(interface{}) error) ([]interface{}, error) {

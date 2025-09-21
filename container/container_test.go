@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2024 Mikhail Knyazhev <markus621@yandex.ru>. All rights reserved.
+ *  Copyright (c) 2024-2025 Mikhail Knyazhev <markus621@yandex.com>. All rights reserved.
  *  Use of this source code is governed by a BSD 3-Clause license that can be found in the LICENSE file.
  */
 
@@ -12,8 +12,9 @@ import (
 
 	"go.osspkg.com/casecheck"
 	"go.osspkg.com/errors"
-	"go.osspkg.com/grape/container"
 	"go.osspkg.com/xc"
+
+	"go.osspkg.com/grape/container"
 )
 
 func TestUnit_EmptyDI(t *testing.T) {
@@ -77,14 +78,14 @@ type SimpleDI1_Service struct {
 
 func (v *SimpleDI1_Service) Up() error {
 	if len(v.ErrUp) > 0 {
-		return fmt.Errorf(v.ErrUp) // nolint: govet
+		return errors.New(v.ErrUp) //nolint:govet
 	}
 	return nil
 }
 
 func (v *SimpleDI1_Service) Down() error {
 	if len(v.ErrDown) > 0 {
-		return fmt.Errorf(v.ErrDown) // nolint: govet
+		return errors.New(v.ErrDown) //nolint:govet
 	}
 	return nil
 }
@@ -351,7 +352,7 @@ func TestUnit_DI_Default(t *testing.T) {
 				&SimpleDI1_A{A: "123"},
 				SimpleDI1_Struct{},
 				func(s SimpleDI1_Struct) error {
-					return fmt.Errorf(s.AA.A) // nolint: govet
+					return errors.New(s.AA.A) //nolint:govet
 				},
 			},
 			wantErr:       true,
@@ -362,9 +363,9 @@ func TestUnit_DI_Default(t *testing.T) {
 			register: []interface{}{
 				SimpleString("QWERT"),
 				func(s SimpleString) error {
-					// nolint: govet
-					// nolint: staticcheck
-					return fmt.Errorf(string(s))
+					//nolint:govet
+					//nolint:staticcheck
+					return errors.New(string(s))
 				},
 			},
 			wantErr:       true,

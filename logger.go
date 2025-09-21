@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2024 Mikhail Knyazhev <markus621@yandex.ru>. All rights reserved.
+ *  Copyright (c) 2024-2025 Mikhail Knyazhev <markus621@yandex.com>. All rights reserved.
  *  Use of this source code is governed by a BSD 3-Clause license that can be found in the LICENSE file.
  */
 
@@ -13,8 +13,9 @@ import (
 	"sync"
 
 	"go.osspkg.com/console"
-	"go.osspkg.com/grape/config"
 	"go.osspkg.com/logx"
+
+	"go.osspkg.com/grape/config"
 )
 
 var (
@@ -45,22 +46,16 @@ func initGlobalLogger(tag string, conf config.LogConfig, handler logx.Logger) *_
 
 	switch conf.Format {
 	case "syslog":
-		defer func() {
-			if p := recover(); p != nil {
-				console.Fatalf("logger panic [type=%s filepath=%s]: %v", conf.Format, conf.FilePath, p)
-			}
-		}()
 		network, addr := "", ""
 		if uri, err0 := url.Parse(conf.FilePath); err0 == nil {
 			network, addr = uri.Scheme, uri.Host
 		}
 		instance.file, err = syslog.Dial(network, addr, syslog.LOG_INFO, tag)
 	default:
-		instance.file, err = os.OpenFile(conf.FilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		instance.file, err = os.OpenFile(conf.FilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	}
-	if err != nil {
-		panic(err)
-	}
+
+	console.FatalIfErr(err, "open log file: %s %s", conf.Format, conf.FilePath)
 
 	instance.handler.SetOutput(instance.file)
 	instance.handler.SetLevel(instance.conf.Level)

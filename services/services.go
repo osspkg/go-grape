@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2024 Mikhail Knyazhev <markus621@yandex.ru>. All rights reserved.
+ *  Copyright (c) 2024-2025 Mikhail Knyazhev <markus621@yandex.com>. All rights reserved.
  *  Use of this source code is governed by a BSD 3-Clause license that can be found in the LICENSE file.
  */
 
@@ -9,9 +9,10 @@ import (
 	"context"
 
 	"go.osspkg.com/errors"
-	"go.osspkg.com/grape/errs"
 	"go.osspkg.com/syncing"
 	"go.osspkg.com/xc"
+
+	"go.osspkg.com/grape/errs"
 )
 
 type (
@@ -121,13 +122,9 @@ func (s *_services) IterateOver() {
 	for s.tree.Previous != nil {
 		s.tree = s.tree.Previous
 	}
-	for {
-		if s.tree.Next == nil {
-			break
-		}
+	for s.tree.Next != nil {
 		s.tree = s.tree.Next
 	}
-	return
 }
 
 // AddAndUp - add new service and call up
