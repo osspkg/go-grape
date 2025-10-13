@@ -10,7 +10,7 @@ require (
 	go.osspkg.com/errors v0.3.1
 	go.osspkg.com/events v0.3.0
 	go.osspkg.com/logx v0.6.0
-	go.osspkg.com/syncing v0.4.0
+	go.osspkg.com/syncing v0.4.3
 	go.osspkg.com/xc v0.4.0
 )
 
