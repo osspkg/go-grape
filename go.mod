@@ -7,7 +7,7 @@ require (
 	go.osspkg.com/casecheck v0.3.0
 	go.osspkg.com/config v0.2.0
 	go.osspkg.com/console v0.3.3
-	go.osspkg.com/errors v0.3.1
+	go.osspkg.com/errors v0.4.0
 	go.osspkg.com/events v0.3.0
 	go.osspkg.com/logx v0.6.0
 	go.osspkg.com/syncing v0.4.0
