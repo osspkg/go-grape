@@ -3,7 +3,7 @@ module go.osspkg.com/grape
 go 1.24.4
 
 require (
-	go.osspkg.com/algorithms v1.6.0
+	go.osspkg.com/algorithms v1.6.1
 	go.osspkg.com/casecheck v0.3.0
 	go.osspkg.com/config v0.2.0
 	go.osspkg.com/console v0.3.3
